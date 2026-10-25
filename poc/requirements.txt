@@ -1,0 +1,6 @@
+# Versions the proof of concept was tested with (Python 3.13, October 2026)
+numpy==2.5.4
+pyproj==3.8.0
+rasterio==1.5.2
+requests==2.34.2
+trimesh==5.2.0
