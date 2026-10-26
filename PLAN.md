@@ -1,6 +1,15 @@
 # Model Village: project plan (draft for review)
 
-Status: **plan only, awaiting your approval**. The one piece of code so far is the Phase 0 proof-of-concept script in `poc/`, which you asked for as part of the plan.
+Status: **shelved (26 October 2026).** Free 1m LIDAR is too coarse for the detailed small-area models that were the main goal.
+
+Reasons to revisit:
+- Higher-resolution open LIDAR for England (a 50cm or better national composite, or much denser repeat surveys).
+- OS 3D Mesh leaving beta with a personal-use licence.
+- A change of goal to larger areas (300m+), or to footprint-based "model village" buildings (section 2.4, M7).
+
+The cheapest first step on return is the two-print test: your house area at 150m printed 120mm wide, and your village at 400m printed 170mm wide, both made with `poc/make_stl.py`.
+
+The one piece of code so far is the Phase 0 proof-of-concept script in `poc/`.
 
 Researched 25 October 2026. Wherever this plan says **verified**, I ran a real request from this environment against the live service. Anything marked **unverified** is something I could not confirm and you should treat with suspicion.
 
