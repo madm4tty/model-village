@@ -150,6 +150,41 @@ New things in there: **venv** is Python's built-in way to keep a project's libra
 
 **Milestone 1's acceptance test is yours**, because I can't run Bambu Studio here: open the STL, check Bambu Studio reports no errors, slice it, and ideally print a small one.
 
+### 2.7 Test case: Leeds city centre (tall buildings)
+
+Checked against a 2.2 x 2.4km box of real data (26 October 2026). This becomes a standing regression test (see M2).
+
+**Heights are accurate:**
+
+| Building | Published height | In the data (first-return DSM minus DTM) |
+|---|---|---|
+| Sky Plaza | 106m | 104.8m |
+| Bridgewater Place | 112m | 107m at the highest 1m cell (its sloping crown narrows to a point thinner than a cell) |
+
+**Walls are near-vertical:**
+
+- Profiles through both towers drop from ~100m to ground in 1 to 3 cells. On Bridgewater Place's north side the drop is one cell (104m, then 0m).
+- On a 300m print, a 100m tower is ~57mm tall and its walls lean by at most 0.6 to 1.7mm: 88 to 89 degrees, which looks vertical.
+- Tall buildings fare better than the low houses in section 2.5.
+- Setbacks and podiums survive; Bridgewater Place's step down to its ~35m lower block is clear.
+
+**Limits:**
+
+- Outlines are stair-stepped at 1m. About half the cells next to walls hold blended mid-height values, giving a slight bevel at the top and bottom of the wall.
+- Anything thinner than ~1m (spires, masts, fins) is lost or shortened.
+- Overhangs and cantilevers print as solid, because the data is a heightfield (one height per point).
+
+**Data age is the real problem:**
+
+- The newest survey covering the city centre is the 2019 National LIDAR Programme.
+- Missing entirely: Arena Point / Cirrus Point (134m, 2025), Jackson House (100m, 2024) and Latitude Blue (98m, 2025).
+- The Arena Quarter around Altus House (114m, completed 2021) is captured as a building site, with spikes up to 161m above ground that are almost certainly tower cranes.
+- Hence the spike filter in M2, and the missing-buildings feature in section 3.7 and M7.
+
+**Practical settings:** 300 to 500m squares and 1x exaggeration. Leeds centre's ground falls ~37m from north to the river, so the 180mm build height is no constraint at these sizes.
+
+Source for published heights: [List of tallest buildings and structures in Leeds (Wikipedia)](https://en.wikipedia.org/wiki/List_of_tallest_buildings_and_structures_in_Leeds).
+
 ---
 
 ## 3. App design (Phase 1 onwards)
@@ -208,7 +243,10 @@ To add:
 ### 3.5 3D preview
 
 - **three.js** (the standard JavaScript 3D library) with OrbitControls (mouse rotate/zoom). It loads the exact STL that would be downloaded, so the preview is truthful.
-- Show the build plate outline (180 x 180mm) for scale.
+- **"On the bed" view:** the model sits on a to-scale mock of the A1 mini's 180 x 180mm plate, rendered in the chosen filament colour.
+  - Optional layer lines at the chosen layer height, so you can judge how fine details and stair-steps will really look.
+  - A warning if the model overhangs the plate or exceeds the 180mm build height.
+  - A throwaway mock-up of this view (Leeds, 500m, real data) is at https://claude.ai/artifact/KJNUQABjqukiwJLNBvDvAm (private to you).
 
 ### 3.6 Export: STL vs 3MF, and colour
 
@@ -225,6 +263,11 @@ To add:
 ### 3.7 Nice-to-haves (later)
 
 - **Plaque:** raised or engraved text on the base or front wall (place name, date, "Contains EA data"). trimesh can extrude text outlines, or use a pre-made font outline.
+- **Add missing buildings manually:** for towers built after the survey (e.g. Leeds's Arena Point), you pick a footprint (from OSM, or draw it on the map) and enter a height or take the published one. The app then:
+  - flattens the old data inside the footprint to ground level (removing any cranes or building site);
+  - raises the footprint as a flat-topped block at that height.
+  
+  The result is a clean vertical-walled block rather than real roof shape, but it keeps a skyline current. Edits are saved per location so they can be reused. It reuses the footprint rasterising code from M7.
 - **Multi-tile prints:** split a larger area (e.g. 1km) into a grid of 170mm tiles with matching edges and a shared base height. Add alignment pegs/holes.
 - **Wales:** NRW all-Wales COGs, same range-read code as the EIDC fallback.
 - **Scotland:** Scottish Remote Sensing Portal 10km tiles, downloaded and cached. Coverage is partial.
@@ -262,12 +305,12 @@ Each milestone ends with something you can run and check.
 | # | Milestone | Done when |
 |---|---|---|
 | **M1** | **Proof of concept** (drafted and tested here) | You've run `poc/make_stl.py` on your house and another location, opened the STLs in Bambu Studio without errors, and printed one small test (e.g. 100m at 100mm wide) |
-| M2 | Turn the PoC into a tidy package: config file, disk cache, OSTN15 bundled, EIDC fallback, spike filter, pytest suite | `pytest` passes (watertight on several locations, coordinate round-trip within 0.1m, fallback produces identical heights); CLI still produces the same STL |
+| M2 | Turn the PoC into a tidy package: config file, disk cache, OSTN15 bundled, EIDC fallback, spike filter, pytest suite | `pytest` passes: watertight on several locations; coordinate round-trip within 0.1m; fallback produces identical heights; **Leeds test:** Sky Plaza and Bridgewater Place within 5% of published heights, and the Arena Quarter crane spikes removed by the filter. CLI still produces the same STL |
 | M3 | Local web server: `/api/model` returns an STL; bare HTML form with lat/lon/size | Download an STL from the browser that matches the CLI output |
 | M4 | Map UI: Leaflet, click to place, size slider, rotated BNG square, scale/info panel | Square drawn on map matches the area of the downloaded model (checked against a known landmark) |
-| M5 | 3D preview with three.js and build plate outline | Preview matches the STL opened in Bambu Studio |
+| M5 | 3D preview with three.js: model on a to-scale A1 mini plate, filament colour, optional layer lines, size warnings | Preview matches the STL opened in Bambu Studio |
 | M6 | Print-quality options: product choice, exaggeration, base thickness, width, tree handling, upsampling; plus a test-print matrix | Side-by-side test prints let you choose sensible defaults |
-| M7 | Footprint sharpening (OSM via Overpass, Geofabrik fallback; OS OpenMap Local as alternative) | A 100m print of your street shows vertical walls and straight edges; comparison print against M6 |
+| M7 | Footprint sharpening (OSM via Overpass, Geofabrik fallback; OS OpenMap Local as alternative), then manually adding missing buildings | A 100m print of your street shows vertical walls and straight edges (compare against M6); a Leeds 500m model includes Arena Point as a 134m block with no crane spikes |
 | M8 | 3MF export: single colour first, then ground/building/vegetation parts | Bambu Studio opens the 3MF as one object with 3 parts; you assign filaments and print |
 | M9 | Nice-to-haves: plaque text, multi-tile, Wales, Scotland, 50cm/25cm | Per feature |
 
@@ -281,7 +324,7 @@ Each milestone ends with something you can run and check.
 | 2 | **Footprint sharpening is fiddly:** misalignment, missing or out-of-date footprints, trees over roofs | Medium / Medium | Make it optional and per-building tolerant; fall back to raw DSM where footprint and LIDAR disagree |
 | 3 | **Multi-colour 3MF:** Bambu-specific metadata undocumented; overlap behaviour unclear | Medium / Medium | Non-overlapping parts; manual filament assignment first; auto-assignment as stretch goal |
 | 4 | **EA endpoints change:** coverage IDs contain UUIDs that may change when composites are refreshed; the tile search API is undocumented | Medium / High | IDs in a config file; read them from GetCapabilities on start-up; EIDC fallback; disk cache |
-| 5 | **Data age:** surveys up to 2022 (York 2020/21); new buildings missing | Certain / Low-Medium | Show survey date in the UI; footprints can reveal mismatches |
+| 5 | **Data age:** surveys up to 2022 (York 2020/21, Leeds centre 2019); new buildings missing; cranes and building sites captured | Certain / Low-Medium (High for fast-changing city centres) | Show survey date in the UI; spike filter; manually add missing buildings (section 3.7) |
 | 6 | **Overpass reliability** (failed from here) | Medium / Low | Geofabrik county extract (offline), cache per area |
 | 7 | **Print practicality:** tall cities mean long prints and lots of filament; thin spikes (spires, trees, cranes) may fail | Medium / Low | Height estimate and solid volume in UI; spike filter; optional max height cap |
 | 8 | **Coordinate accuracy** if the OSTN15 grid isn't loaded (~2m error) | Low / Low | Bundle the grid; test asserts it's in use |
